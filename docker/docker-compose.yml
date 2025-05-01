@@ -5,20 +5,15 @@ services:
     image: postgres:16
     container_name: postgres
     environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: 123456
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: qwaszx1325
       POSTGRES_DB: mirco_mart_DB
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
       - ./init-multiple-db.sql:/docker-entrypoint-initdb.d/init-multiple-db.sql
     networks:
       - backend
-
-volumes:
-  pgdata:
-
 
 networks:
   backend:
