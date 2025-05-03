@@ -1,8 +1,13 @@
 package error
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
+	internal "micro-mart/pkg/error/internal/gen"
 	"net/http"
+
+	"google.golang.org/grpc/status"
 )
 
 // MmError is a custom error type that wraps error code, message, and error sources.
@@ -83,4 +88,97 @@ func (e *MmError) Unwrap() []error {
 func (e *MmError) WithData(data any) *MmError {
 	e.data = data
 	return e
+}
+
+// Is checks if the target error matches the KgsError.
+func (e *MmError) Is(target error) bool {
+	t, ok := target.(*MmError)
+	if !ok {
+		return false
+	}
+	return e.code == t.code
+}
+
+// Data returns the data associated with the KgsError.
+func (e *MmError) Data() any {
+	return e.data
+}
+
+// WithSource add error sources to the KgsError.
+func (e *MmError) WithSource(err error) *MmError {
+	e.sources = append(e.sources, err)
+	return e
+}
+
+// FromGrpcErr converts a gRPC error to a KgsError.
+// Parameters:
+//   - err: The gRPC error.
+//
+// Returns:
+//   - error: The KgsError.
+//   - ok: A boolean indicating if the conversion was successful.
+//
+// Example:
+//
+//	kgsErr, ok := FromGrpcErr(err)
+func FromGrpcErr(err error) (kgsErr *MmError, ok bool) {
+	st, ok := status.FromError(err)
+	if !ok {
+		return nil, false
+	}
+
+	// Check if the error is our custom KgsError
+	for _, detail := range st.Details() {
+		if proto, ok := detail.(*internal.ErrorProto); ok {
+			kgsErr, err := fromProto(proto)
+			if err != nil {
+				return nil, false
+			}
+			return kgsErr, true
+		}
+	}
+
+	return nil, false
+}
+
+// toProto converts the KgsError to a proto message.
+func (e *MmError) toProto() (*internal.ErrorProto, error) {
+	dataBytes, err := json.Marshal(e.data)
+	if err != nil {
+		return nil, err
+	}
+
+	sources := make([]string, len(e.sources))
+	for i, src := range e.sources {
+		if src != nil {
+			sources[i] = src.Error()
+		}
+	}
+
+	return &internal.ErrorProto{
+		Code:    int32(e.code),
+		Message: e.msg,
+		Data:    dataBytes,
+		Source:  sources,
+	}, nil
+}
+
+// fromProto converts a proto message to a KgsError.
+func fromProto(proto *internal.ErrorProto) (*MmError, error) {
+	data := make(map[string]interface{})
+	if err := json.Unmarshal(proto.Data, &data); err != nil {
+		return nil, err
+	}
+
+	sources := make([]error, len(proto.Source))
+	for i, src := range proto.Source {
+		sources[i] = errors.New(src)
+	}
+
+	return &MmError{
+		code:    MmCode(proto.Code),
+		msg:     proto.Message,
+		data:    data,
+		sources: sources,
+	}, nil
 }
