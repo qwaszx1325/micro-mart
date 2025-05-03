@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package internal;
+
+option go_package = "/internal";
+
+message ErrorProto {
+  int32 code = 1;
+  string message = 2;
+  repeated string source = 3;
+  bytes data = 4;
+}
