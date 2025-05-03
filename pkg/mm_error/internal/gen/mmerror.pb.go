@@ -21,7 +21,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type ErrorProto struct {
+type MmErrorProto struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Code          int32                  `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
 	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
@@ -31,20 +31,20 @@ type ErrorProto struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ErrorProto) Reset() {
-	*x = ErrorProto{}
+func (x *MmErrorProto) Reset() {
+	*x = MmErrorProto{}
 	mi := &file_mmerror_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ErrorProto) String() string {
+func (x *MmErrorProto) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ErrorProto) ProtoMessage() {}
+func (*MmErrorProto) ProtoMessage() {}
 
-func (x *ErrorProto) ProtoReflect() protoreflect.Message {
+func (x *MmErrorProto) ProtoReflect() protoreflect.Message {
 	mi := &file_mmerror_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -56,33 +56,33 @@ func (x *ErrorProto) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ErrorProto.ProtoReflect.Descriptor instead.
-func (*ErrorProto) Descriptor() ([]byte, []int) {
+// Deprecated: Use MmErrorProto.ProtoReflect.Descriptor instead.
+func (*MmErrorProto) Descriptor() ([]byte, []int) {
 	return file_mmerror_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *ErrorProto) GetCode() int32 {
+func (x *MmErrorProto) GetCode() int32 {
 	if x != nil {
 		return x.Code
 	}
 	return 0
 }
 
-func (x *ErrorProto) GetMessage() string {
+func (x *MmErrorProto) GetMessage() string {
 	if x != nil {
 		return x.Message
 	}
 	return ""
 }
 
-func (x *ErrorProto) GetSource() []string {
+func (x *MmErrorProto) GetSource() []string {
 	if x != nil {
 		return x.Source
 	}
 	return nil
 }
 
-func (x *ErrorProto) GetData() []byte {
+func (x *MmErrorProto) GetData() []byte {
 	if x != nil {
 		return x.Data
 	}
@@ -93,9 +93,8 @@ var File_mmerror_proto protoreflect.FileDescriptor
 
 const file_mmerror_proto_rawDesc = "" +
 	"\n" +
-	"\rmmerror.proto\x12\binternal\"f\n" +
-	"\n" +
-	"ErrorProto\x12\x12\n" +
+	"\rmmerror.proto\x12\binternal\"h\n" +
+	"\fMmErrorProto\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\x05R\x04code\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x16\n" +
 	"\x06source\x18\x03 \x03(\tR\x06source\x12\x12\n" +
@@ -115,7 +114,7 @@ func file_mmerror_proto_rawDescGZIP() []byte {
 
 var file_mmerror_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_mmerror_proto_goTypes = []any{
-	(*ErrorProto)(nil), // 0: internal.ErrorProto
+	(*MmErrorProto)(nil), // 0: internal.MmErrorProto
 }
 var file_mmerror_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type

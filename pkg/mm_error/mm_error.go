@@ -1,10 +1,10 @@
-package error
+package mmerror
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	internal "micro-mart/pkg/error/internal/gen"
+	internal "micro-mart/pkg/mm_error/internal/gen"
 	"net/http"
 
 	"google.golang.org/grpc/status"
@@ -90,7 +90,7 @@ func (e *MmError) WithData(data any) *MmError {
 	return e
 }
 
-// Is checks if the target error matches the KgsError.
+// Is checks if the target error matches the MmError.
 func (e *MmError) Is(target error) bool {
 	t, ok := target.(*MmError)
 	if !ok {
@@ -99,50 +99,50 @@ func (e *MmError) Is(target error) bool {
 	return e.code == t.code
 }
 
-// Data returns the data associated with the KgsError.
+// Data returns the data associated with the MmError.
 func (e *MmError) Data() any {
 	return e.data
 }
 
-// WithSource add error sources to the KgsError.
+// WithSource add error sources to the MmError.
 func (e *MmError) WithSource(err error) *MmError {
 	e.sources = append(e.sources, err)
 	return e
 }
 
-// FromGrpcErr converts a gRPC error to a KgsError.
+// FromGrpcErr converts a gRPC error to a MmError.
 // Parameters:
 //   - err: The gRPC error.
 //
 // Returns:
-//   - error: The KgsError.
+//   - error: The MmError.
 //   - ok: A boolean indicating if the conversion was successful.
 //
 // Example:
 //
-//	kgsErr, ok := FromGrpcErr(err)
-func FromGrpcErr(err error) (kgsErr *MmError, ok bool) {
+//	mmErr, ok := FromGrpcErr(err)
+func FromGrpcErr(err error) (mmErr *MmError, ok bool) {
 	st, ok := status.FromError(err)
 	if !ok {
 		return nil, false
 	}
 
-	// Check if the error is our custom KgsError
+	// Check if the error is our custom MmError
 	for _, detail := range st.Details() {
-		if proto, ok := detail.(*internal.ErrorProto); ok {
-			kgsErr, err := fromProto(proto)
+		if proto, ok := detail.(*internal.MmErrorProto); ok {
+			mmErr, err := fromProto(proto)
 			if err != nil {
 				return nil, false
 			}
-			return kgsErr, true
+			return mmErr, true
 		}
 	}
 
 	return nil, false
 }
 
-// toProto converts the KgsError to a proto message.
-func (e *MmError) toProto() (*internal.ErrorProto, error) {
+// toProto converts the MmError to a proto message.
+func (e *MmError) toProto() (*internal.MmErrorProto, error) {
 	dataBytes, err := json.Marshal(e.data)
 	if err != nil {
 		return nil, err
@@ -155,7 +155,7 @@ func (e *MmError) toProto() (*internal.ErrorProto, error) {
 		}
 	}
 
-	return &internal.ErrorProto{
+	return &internal.MmErrorProto{
 		Code:    int32(e.code),
 		Message: e.msg,
 		Data:    dataBytes,
@@ -163,8 +163,8 @@ func (e *MmError) toProto() (*internal.ErrorProto, error) {
 	}, nil
 }
 
-// fromProto converts a proto message to a KgsError.
-func fromProto(proto *internal.ErrorProto) (*MmError, error) {
+// fromProto converts a proto message to a MmError.
+func fromProto(proto *internal.MmErrorProto) (*MmError, error) {
 	data := make(map[string]interface{})
 	if err := json.Unmarshal(proto.Data, &data); err != nil {
 		return nil, err

@@ -11,3 +11,9 @@ type RedisCache struct {
 }
 
 var _ db.Cache = (*RedisCache)(nil)
+
+func NewRedisCache(client *redis.Client) *RedisCache {
+	return &RedisCache{
+		client: client,
+	}
+}

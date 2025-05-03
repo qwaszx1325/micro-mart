@@ -1,4 +1,4 @@
-package error
+package mmerror
 
 import (
 	"net/http"
