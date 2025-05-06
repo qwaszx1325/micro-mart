@@ -27,15 +27,32 @@ import (
 func LoadConfigFromEnv[T any]() (*T, error) {
 	var result T
 
+	// Try to load from different possible locations
 	envFile := ".env"
 	env := os.Getenv("ENV")
 	if env != "" {
 		envFile = fmt.Sprintf(".env.%s", env)
 	}
+
+	// Try current directory first
 	err := godotenv.Load(envFile)
 	if err != nil {
-		mmotel.Error(context.Background(), err.Error())
-		// return nil, err
+		// Try service directory
+		serviceEnvPath := fmt.Sprintf("services/user/%s", envFile)
+		err = godotenv.Load(serviceEnvPath)
+		if err != nil {
+			// Try absolute path if provided
+			if envPath := os.Getenv("ENV_FILE_PATH"); envPath != "" {
+				err = godotenv.Load(envPath)
+				if err != nil {
+					mmotel.Error(context.Background(), fmt.Sprintf("Failed to load .env file from all locations: %s", err.Error()))
+					return nil, fmt.Errorf("failed to load environment variables: %w", err)
+				}
+			} else {
+				mmotel.Error(context.Background(), fmt.Sprintf("Failed to load .env file: %s", err.Error()))
+				return nil, fmt.Errorf("failed to load environment variables: %w", err)
+			}
+		}
 	}
 
 	err = loadFromEnvironment(reflect.ValueOf(&result).Elem())

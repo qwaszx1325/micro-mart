@@ -1,8 +1,11 @@
 package aggregate
 
-import "micro-mart/services/user/domain/entity"
+import (
+	"github.com/google/uuid"
+	"micro-mart/services/user/domain/entity"
+)
 
 type User struct {
-	ID      int64
+	ID      uuid.UUID
 	Profile entity.Profile
 }

@@ -1,9 +1,9 @@
-// pkg/mmotel/tracer.go
 package mmotel
 
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -15,12 +15,29 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 )
 
+// Field 定義一個鍵值對字段結構
+type Field struct {
+	Key   string
+	Value interface{}
+}
+
+// NewField 創建一個新的字段
+func NewField(key string, value interface{}) Field {
+	return Field{
+		Key:   key,
+		Value: value,
+	}
+}
+
+// Span 定義一個追蹤Span接口
 type Span interface {
 	End()
 }
 
+// otelSpan 實現Span接口
 type otelSpan struct {
 	span trace.Span
 }
@@ -29,9 +46,9 @@ func (s otelSpan) End() {
 	s.span.End()
 }
 
-// StartTrace 開始一個新的追蹤 span
+// StartTrace 開始一個新的追蹤Span
 func StartTrace(ctx context.Context) (context.Context, Span) {
-	// 從上下文中獲取 service name 或使用預設值
+	// 從上下文中獲取service name或使用預設值
 	serviceName := ctx.Value("service_name")
 	if serviceName == nil {
 		serviceName = "micro-mart"
@@ -39,24 +56,51 @@ func StartTrace(ctx context.Context) (context.Context, Span) {
 
 	tracer := otel.Tracer(fmt.Sprintf("%v", serviceName))
 
-	// 從上下文中獲取最後一個函數名稱或使用預設值
-	functionName := ctx.Value("function_name")
-	if functionName == nil {
-		functionName = "unknown"
+	// 自動獲取調用者信息
+	caller, funcName := getCaller(2)
+
+	ctx, span := tracer.Start(ctx, funcName)
+	traceID := span.SpanContext().TraceID().String()
+	spanID := span.SpanContext().SpanID().String()
+
+	// 設置基本屬性
+	attributes := []attribute.KeyValue{
+		attribute.String("traceID", traceID),
+		attribute.String("spanID", spanID),
+		attribute.String("caller", caller),
+		attribute.String("funcName", funcName),
 	}
 
-	ctx, span := tracer.Start(ctx, fmt.Sprintf("%v", functionName))
+	span.SetAttributes(attributes...)
+
 	return ctx, otelSpan{span}
 }
 
-// Error 記錄一個錯誤到當前 span
-func Error(ctx context.Context, msg string) {
-	span := trace.SpanFromContext(ctx)
-	span.SetStatus(codes.Error, msg)
-	span.RecordError(fmt.Errorf(msg))
+// Info 記錄信息級別的日誌並添加到追蹤
+func Info(ctx context.Context, message string, fields ...Field) {
+	span, zapFields := setSpanAttrsAndZapFields(ctx, fields...)
+	span.AddEvent(message)
+	zap.L().Info(message, zapFields...)
 }
 
-// AddAttribute 添加一個屬性到當前 span
+// Warn 記錄警告級別的日誌並添加到追蹤
+func Warn(ctx context.Context, message string, fields ...Field) {
+	span, zapFields := setSpanAttrsAndZapFields(ctx, fields...)
+	span.AddEvent(message)
+	span.SetStatus(codes.Error, message)
+	zap.L().Warn(message, zapFields...)
+}
+
+// Error 記錄錯誤級別的日誌並添加到追蹤
+func Error(ctx context.Context, message string, fields ...Field) {
+	span, zapFields := setSpanAttrsAndZapFields(ctx, fields...)
+	span.AddEvent(message)
+	span.SetStatus(codes.Error, message)
+	span.RecordError(fmt.Errorf(message))
+	zap.L().Error(message, zapFields...)
+}
+
+// AddAttribute 添加一個屬性到當前span
 func AddAttribute(ctx context.Context, key string, value interface{}) {
 	span := trace.SpanFromContext(ctx)
 
@@ -76,14 +120,55 @@ func AddAttribute(ctx context.Context, key string, value interface{}) {
 	}
 }
 
-// InitTracer 初始化 OpenTelemetry 追蹤器並連接到 Jaeger
+// setSpanAttrsAndZapFields 設置Span屬性並創建Zap字段
+func setSpanAttrsAndZapFields(ctx context.Context, fields ...Field) (span trace.Span, zapFields []zap.Field) {
+	span = trace.SpanFromContext(ctx)
+	traceID := span.SpanContext().TraceID().String()
+	spanID := span.SpanContext().SpanID().String()
+	caller, funcName := getCaller(3)
+
+	// 創建Span屬性和Zap日誌字段
+	attributes := []attribute.KeyValue{
+		attribute.String("traceID", traceID),
+		attribute.String("spanID", spanID),
+		attribute.String("caller", caller),
+		attribute.String("funcName", funcName),
+	}
+
+	zapFields = []zap.Field{
+		zap.String("traceID", traceID),
+		zap.String("spanID", spanID),
+		zap.String("caller", caller),
+		zap.String("funcName", funcName),
+	}
+
+	for _, field := range fields {
+		attributes = append(attributes, attribute.String(field.Key, fmt.Sprintf("%v", field.Value)))
+		zapFields = append(zapFields, zap.Any(field.Key, field.Value))
+	}
+	span.SetAttributes(attributes...)
+
+	return span, zapFields
+}
+
+// getCaller 獲取調用者信息
+func getCaller(skip int) (caller string, funcName string) {
+	pc, file, line, ok := runtime.Caller(skip)
+	if !ok {
+		return "unknown", "unknown"
+	}
+	fn := runtime.FuncForPC(pc)
+	return fmt.Sprintf("%s:%d", file, line), fn.Name()
+}
+
+// InitTracer 初始化OpenTelemetry追蹤器並連接到Jaeger
 func InitTracer(serviceName string) func() {
 	ctx := context.Background()
 
-	// 使用新的推薦方法建立 OTLP exporter
+	// 使用OTLP exporter
 	exporter, err := otlptracegrpc.New(
 		ctx,
-		otlptracegrpc.WithEndpoint("jaeger:4317"), // 使用 Docker 服務名稱
+		otlptracegrpc.WithEndpoint("jaeger:4317"),
 		otlptracegrpc.WithInsecure(),
 	)
 	if err != nil {
@@ -91,7 +176,7 @@ func InitTracer(serviceName string) func() {
 		return func() {}
 	}
 
-	// 創建一個資源，描述您的服務
+	// 創建服務資源
 	res, err := resource.New(
 		ctx,
 		resource.WithAttributes(
@@ -104,10 +189,10 @@ func InitTracer(serviceName string) func() {
 		return func() {}
 	}
 
-	// 創建一個批處理 span 處理器
+	// 創建批處理Span處理器
 	bsp := sdktrace.NewBatchSpanProcessor(exporter)
 
-	// 創建並設置 tracer provider
+	// 創建並設置追蹤提供者
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithResource(res),
@@ -115,15 +200,14 @@ func InitTracer(serviceName string) func() {
 	)
 	otel.SetTracerProvider(tp)
 
-	// 設置全局的傳播器
+	// 設置全局傳播器
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{},
 		propagation.Baggage{},
 	))
 
-	// 返回一個清理函數
+	// 返回清理函數
 	return func() {
-		// 關閉 tracer provider
 		cctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := tp.Shutdown(cctx); err != nil {

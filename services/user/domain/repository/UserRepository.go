@@ -8,5 +8,5 @@ import (
 
 type UserRepository interface {
 	RegisterUser(ctx context.Context, u *aggregate.User) (*aggregate.User, *mmerror.MmError)
-	LoginUser(ctx context.Context, userName string) (*aggregate.User, *mmerror.MmError)
+	GetUserByUserName(ctx context.Context, userName string) (*aggregate.User, *mmerror.MmError)
 }
