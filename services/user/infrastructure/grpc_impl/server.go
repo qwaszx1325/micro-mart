@@ -21,9 +21,11 @@ func NewGrpcServer(lc fx.Lifecycle, userService *application.UserService) *grpc.
 	s := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			mmotel.UnaryTraceInterceptor(),
+			mmotel.ErrorLoggingInterceptor(), // 添加錯誤日誌攔截器
 		),
 		grpc.ChainStreamInterceptor(
 			mmotel.StreamTraceInterceptor(),
+			mmotel.StreamErrorLoggingInterceptor(), // 添加流式錯誤日誌攔截器
 		),
 	)
 

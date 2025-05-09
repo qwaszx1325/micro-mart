@@ -35,6 +35,8 @@ func (repo *UserRepository) RegisterUser(ctx context.Context, u *aggregate.User)
 		Save(ctx)
 
 	if err != nil {
+
+		mmotel.Error(ctx, "Register user failed", mmotel.NewField("err", err))
 		return nil, mmerror.New(mmerror.InternalServerError, "register user fail")
 	}
 	user := &aggregate.User{

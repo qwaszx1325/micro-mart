@@ -2,6 +2,8 @@ package application
 
 import (
 	"context"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"micro-mart/pkg/db"
 	"micro-mart/pkg/mmotel"
 	"micro-mart/pkg/pb/gen/user"
@@ -28,6 +30,10 @@ func NewUserService(userService *service.UserService, db db.Database) *UserServi
 func (s *UserService) Register(ctx context.Context, req *user.RegisterRequest) (*user.AuthResponse, error) {
 	ctx, span := mmotel.StartTrace(ctx)
 	defer span.End()
+
+	// 紀錄錯誤到追蹤系統（Jaeger）
+	mmotel.Error(ctx, "模擬錯誤")
+	return nil, status.Error(codes.Internal, "模擬錯誤")
 
 	profile := entity.Profile{}
 

@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"google.golang.org/grpc/status"
 	internal "micro-mart/pkg/mm_error/internal/gen"
 	"net/http"
-
-	"google.golang.org/grpc/status"
+	"path/filepath"
+	"runtime"
 )
 
 // MmError is a custom error type that wraps error code, message, and error sources.
@@ -16,36 +17,34 @@ type MmError struct {
 	msg     string
 	data    any
 	sources []error
+	file    string
+	line    int
 }
 
-// New creates a new MmError.
-// Parameters:
-//   - code: The MmCode of the error.
-//   - msg: The error message.
-//   - data: The data associated with the error.
-//   - source: The error sources.
-//
-// Returns:
-//   - error: The MmError.
-//
-// Example:
-//
-//	err := NewMmError(ErrInvalidInput, "err_msg")
-//	err := NewMmError(ErrInvalidInput, "err_msg",err)
-//	err := NewMmError(ErrInvalidInput, "err_msg",err1,err2)
+// New creates a new MmError with location information.
 func New(code MmCode, msg string, source ...error) *MmError {
+	// 獲取調用者位置信息
+	_, file, line, _ := runtime.Caller(1)
+	shortFile := filepath.Base(file)
+
 	return &MmError{
 		code:    code,
 		msg:     msg,
 		sources: source,
+		file:    shortFile,
+		line:    line,
 	}
 }
 
 func (e *MmError) Error() string {
+	location := fmt.Sprintf("%s:%d", e.file, e.line)
+
 	if len(e.sources) > 0 {
-		return fmt.Sprintf("mmCode: %v, msg:%s,  sources: %v", e.code, e.msg, e.sources)
+		return fmt.Sprintf("mmCode: %v, location: %s, msg: %s, sources: %v",
+			e.code, location, e.msg, e.sources)
 	}
-	return fmt.Sprintf("mmCode: %v, msg:%s", e.code, e.msg)
+	return fmt.Sprintf("mmCode: %v, location: %s, msg: %s",
+		e.code, location, e.msg)
 }
 
 // HttpCode returns the standard HTTP status code.
