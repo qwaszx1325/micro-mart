@@ -13,26 +13,33 @@ import (
 
 // MmError is a custom error type that wraps error code, message, and error sources.
 type MmError struct {
-	code    MmCode
-	msg     string
-	data    any
-	sources []error
-	file    string
-	line    int
+	code      MmCode
+	msg       string
+	data      any
+	sources   []error
+	file      string
+	line      int
+	stacktrace []uintptr // Stack trace of the error
 }
 
-// New creates a new MmError with location information.
+// New creates a new MmError with location information and stack trace.
 func New(code MmCode, msg string, source ...error) *MmError {
 	// 獲取調用者位置信息
 	_, file, line, _ := runtime.Caller(1)
 	shortFile := filepath.Base(file)
 
+	// 獲取堆棧跟踪
+	const depth = 32
+	var pcs [depth]uintptr
+	n := runtime.Callers(2, pcs[:])
+
 	return &MmError{
-		code:    code,
-		msg:     msg,
-		sources: source,
-		file:    shortFile,
-		line:    line,
+		code:      code,
+		msg:       msg,
+		sources:   source,
+		file:      shortFile,
+		line:      line,
+		stacktrace: pcs[:n],
 	}
 }
 
@@ -45,6 +52,29 @@ func (e *MmError) Error() string {
 	}
 	return fmt.Sprintf("mmCode: %v, location: %s, msg: %s",
 		e.code, location, e.msg)
+}
+
+// ErrorWithStack returns the error message with stack trace.
+func (e *MmError) ErrorWithStack() string {
+	return e.Error() + "\nStack trace:" + e.StackTrace()
+}
+
+// StackTrace returns the stack trace as a string.
+func (e *MmError) StackTrace() string {
+	if len(e.stacktrace) == 0 {
+		return "no stack trace available"
+	}
+
+	frames := runtime.CallersFrames(e.stacktrace)
+	var trace string
+	for {
+		frame, more := frames.Next()
+		trace += fmt.Sprintf("\n\t%s:%d %s", filepath.Base(frame.File), frame.Line, frame.Function)
+		if !more {
+			break
+		}
+	}
+	return trace
 }
 
 // HttpCode returns the standard HTTP status code.

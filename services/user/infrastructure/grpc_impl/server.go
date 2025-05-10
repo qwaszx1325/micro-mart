@@ -3,14 +3,16 @@ package grpc_impl
 import (
 	"context"
 	"fmt"
+	"log"
+	"net"
+
 	"go.uber.org/fx"
 	"google.golang.org/grpc"
-	"log"
-	"micro-mart/pkg/mmotel"
+
+	"micro-mart/pkg/mmotel" // 使用您的 mmotel 包
 	"micro-mart/pkg/pb/gen/user"
 	"micro-mart/services/user/application"
 	"micro-mart/services/user/config"
-	"net"
 )
 
 func NewGrpcServer(lc fx.Lifecycle, userService *application.UserService) *grpc.Server {
@@ -33,7 +35,9 @@ func NewGrpcServer(lc fx.Lifecycle, userService *application.UserService) *grpc.
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			// 初始化追蹤器
-			shutdown = mmotel.InitTracer(cfg.ServiceName)
+			shutdown = mmotel.InitTracer(cfg.ServiceName,
+				mmotel.WithJaegerExporter(cfg.OtelUrl), // 假設有 Jaeger 端點配置
+			)
 
 			// 監聽端口
 			lis, err := net.Listen("tcp", cfg.ServiceUrl)
@@ -42,13 +46,12 @@ func NewGrpcServer(lc fx.Lifecycle, userService *application.UserService) *grpc.
 				return err
 			}
 
-			// 註冊服務 (您需要根據實際情況註冊對應的服務)
-			// 例如: pb.RegisterUserServiceServer(s, userService)
+			// 註冊服務
+			user.RegisterUserServiceServer(s, userService)
 
 			// 啟動服務
 			go func() {
 				ctx := context.WithValue(context.Background(), "service_name", cfg.Host.ServiceName)
-				user.RegisterUserServiceServer(s, userService)
 				if err := s.Serve(lis); err != nil {
 					mmotel.Error(ctx, "服務啟動失敗", mmotel.NewField("error", err))
 				}

@@ -5,6 +5,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"micro-mart/pkg/db"
+	mmerror "micro-mart/pkg/mm_error"
 	"micro-mart/pkg/mmotel"
 	"micro-mart/pkg/pb/gen/user"
 	"micro-mart/services/user/domain/aggregate"
@@ -28,55 +29,142 @@ func NewUserService(userService *service.UserService, db db.Database) *UserServi
 }
 
 func (s *UserService) Register(ctx context.Context, req *user.RegisterRequest) (*user.AuthResponse, error) {
-	ctx, span := mmotel.StartTrace(ctx)
+	ctx, span := mmotel.StartSpan(ctx, "ApplicationUserService.Register")
 	defer span.End()
 
-	// 紀錄錯誤到追蹤系統（Jaeger）
-	mmotel.Error(ctx, "模擬錯誤")
-	return nil, status.Error(codes.Internal, "模擬錯誤")
+	// Validate request
+	if req == nil {
+		mmotel.Error(ctx, "Register request is nil")
+		return nil, status.Error(codes.InvalidArgument, "Register request cannot be nil")
+	}
 
-	profile := entity.Profile{}
+	if req.GetEmail() == "" || req.GetUsername() == "" || req.GetPassword() == "" {
+		mmotel.Error(ctx, "Invalid register request",
+			mmotel.NewField("email", req.GetEmail()),
+			mmotel.NewField("username", req.GetUsername()))
+		return nil, status.Error(codes.InvalidArgument, "Email, username and password are required")
+	}
 
-	profile.Email = req.GetEmail()
-	profile.Name = req.GetUsername()
-	profile.Password = req.GetPassword()
+	// Create user profile
+	profile := entity.Profile{
+		Email:    req.GetEmail(),
+		Name:     req.GetUsername(),
+		Password: req.GetPassword(),
+	}
+
 	u := &aggregate.User{
 		Profile: profile,
 	}
 
+	// Begin transaction
 	ctx, err := s.db.Begin(ctx)
 	if err != nil {
-		return nil, err
+		mmotel.Error(ctx, "Failed to begin transaction", mmotel.NewField("error", err))
+		return nil, status.Error(codes.Internal, "Failed to process registration")
 	}
 
-	_, err = s.userService.Register(ctx, u)
-	if err != nil {
+	// Register user
+	_, mmErr := s.userService.Register(ctx, u)
+	if mmErr != nil {
+		// Rollback transaction
 		_, rollbackErr := s.db.Rollback(ctx)
 		if rollbackErr != nil {
-			mmotel.Error(ctx, rollbackErr.Error())
-			err = rollbackErr
+			mmotel.Error(ctx, "Failed to rollback transaction",
+				mmotel.NewField("rollbackError", rollbackErr),
+				mmotel.NewField("originalError", mmErr))
 		}
-		return nil, err
+
+		// Map domain error to gRPC error
+		code := codes.Internal
+		switch mmErr.Code() {
+		case mmerror.InvalidArgument:
+			code = codes.InvalidArgument
+		case mmerror.ResourceIsExist:
+			code = codes.AlreadyExists
+		}
+
+		return nil, status.Error(code, mmErr.Message())
 	}
 
 	// Commit the transaction
 	_, commitErr := s.db.Commit(ctx)
 	if commitErr != nil {
-		mmotel.Error(ctx, commitErr.Error())
-		return nil, commitErr
+		mmotel.Error(ctx, "Failed to commit transaction", mmotel.NewField("error", commitErr))
+		return nil, status.Error(codes.Internal, "Failed to complete registration")
 	}
 
+	// Generate tokens (this is a placeholder - real implementation would generate actual tokens)
+	// In a real implementation, you would:
+	// 1. Generate JWT tokens with appropriate claims
+	// 2. Set proper expiration times
+	// 3. Store refresh token in database
+	accessToken := "jwt-token-would-be-generated-here"
+	refreshToken := "refresh-token-would-be-generated-here"
+	expiresAt := int64(3600) // 1 hour in seconds
+
 	return &user.AuthResponse{
-		AccessToken:  "aaa",
-		RefreshToken: "aaaa",
-		Message:      "aaa",
-		Success:      false,
-		ExpiresAt:    123,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		Message:      "Registration successful",
+		Success:      true,
+		ExpiresAt:    expiresAt,
 	}, nil
 }
 
 func (s *UserService) Login(ctx context.Context, req *user.LoginRequest) (*user.AuthResponse, error) {
-
+	//ctx, span := mmotel.StartSpan(ctx, "ApplicationUserService.Login")
+	//defer span.End()
+	//
+	//// Validate request
+	//if req == nil {
+	//	mmotel.Error(ctx, "Login request is nil")
+	//	return nil, status.Error(codes.InvalidArgument, "Login request cannot be nil")
+	//}
+	//
+	//if req.GetUsername() == "" || req.GetPassword() == "" {
+	//	mmotel.Error(ctx, "Invalid login request",
+	//		mmotel.NewField("username", req.GetUsername()))
+	//	return nil, status.Error(codes.InvalidArgument, "Username and password are required")
+	//}
+	//
+	//// Get user by username
+	//user, mmErr := s.userService.GetUserByUserName(ctx, req.GetUsername())
+	//if mmErr != nil {
+	//	// Map domain error to gRPC error
+	//	code := codes.Internal
+	//	switch mmErr.Code() {
+	//	case mmerror.InvalidArgument:
+	//		code = codes.InvalidArgument
+	//	case mmerror.ResourceNotFound:
+	//		// Don't expose that the user doesn't exist for security reasons
+	//		return nil, status.Error(codes.Unauthenticated, "Invalid username or password")
+	//	}
+	//
+	//	mmotel.Error(ctx, "Failed to get user",
+	//		mmotel.NewField("username", req.GetUsername()),
+	//		mmotel.NewField("error", mmErr))
+	//	return nil, status.Error(code, "Login failed")
+	//}
+	//
+	//// Verify password (in a real app, you would use a secure password comparison)
+	//if user.Profile.Password != req.GetPassword() {
+	//	mmotel.Error(ctx, "Invalid password",
+	//		mmotel.NewField("username", req.GetUsername()))
+	//	return nil, status.Error(codes.Unauthenticated, "Invalid username or password")
+	//}
+	//
+	//// Generate tokens (this is a placeholder - real implementation would generate actual tokens)
+	//accessToken := "jwt-token-would-be-generated-here"
+	//refreshToken := "refresh-token-would-be-generated-here"
+	//expiresAt := int64(3600) // 1 hour in seconds
+	//
+	//return &user.AuthResponse{
+	//	Success:       true,
+	//	Message:       "Login successful",
+	//	AccessToken:   accessToken,
+	//	RefreshToken:  refreshToken,
+	//	ExpiresAt:     expiresAt,
+	//}, nil
 	return nil, nil
 }
 func (s *UserService) RefreshToken(ctx context.Context, req *user.RefreshTokenRequest) (*user.AuthResponse, error) {

@@ -24,7 +24,7 @@ import (
 //	    Host string `env:"HOST"`  //  get the value of the environment variable `HOST`
 //	    Port int `env:"PORT"` //  get the value of the environment variable `PORT`
 //	}
-func LoadConfigFromEnv[T any]() (*T, error) {
+func LoadConfigFromEnv[T any](serviceName string) (*T, error) {
 	var result T
 
 	// Try to load from different possible locations
@@ -38,7 +38,7 @@ func LoadConfigFromEnv[T any]() (*T, error) {
 	err := godotenv.Load(envFile)
 	if err != nil {
 		// Try service directory
-		serviceEnvPath := fmt.Sprintf("services/user/%s", envFile)
+		serviceEnvPath := fmt.Sprintf("services/%s/%s", serviceName, envFile)
 		err = godotenv.Load(serviceEnvPath)
 		if err != nil {
 			// Try absolute path if provided

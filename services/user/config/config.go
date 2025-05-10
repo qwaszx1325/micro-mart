@@ -3,19 +3,21 @@ package config
 import (
 	"log"
 	"micro-mart/pkg/cfgloader"
-	"sync"
 )
 
 type (
+	// 服務配置
 	Host struct {
 		ServiceName string `env:"SERVICE_NAME"`
 		ServiceUrl  string `env:"SERVICE_URL"`
 	}
 
+	// OTEL 配置 (Jaeger)
 	Otel struct {
 		OtelUrl string `env:"OTEL_URL"`
 	}
 
+	// Redis 配置
 	Redis struct {
 		RedisUrl    string `env:"REDIS_URL"`
 		Password    string `env:"REDIS_PASSWORD"`
@@ -25,7 +27,11 @@ type (
 		MaxIdle     int    `env:"REDIS_MAX_IDLE_CONNS"`
 		ConnTimeout int    `env:"REDIS_CONN_TIMEOUT_SECS"`
 	}
+	UserUrl struct {
+		UserUrl string `env:"USER_URL"`
+	}
 
+	// 資料庫配置 (PostgreSQL)
 	DB struct {
 		Host        string `env:"DB_HOST"`
 		Port        int    `env:"DB_PORT"`
@@ -38,12 +44,13 @@ type (
 		AutoMigrate bool   `env:"AUTO_MIGRATE"`
 	}
 
-	VERIFICATION struct {
-		VerificationTokenExpiry           int `env:"VERIFICATION_TOKEN_EXPIRY"`
-		VerificationTokenLockPeriod       int `env:"VERIFICATION_TOKEN_LOCK_PREIOD"`
-		VerificationTokenCountPeriod      int `env:"VERIFICATION_TOKEN_COUNT_PREIOD"`
-		VerificationTokenNotifyLockPeriod int `env:"VERIFICATION_TOKEN_NOTIFY_LOCK_PREIOD"`
-		VerificationTokenTotalAttempts    int `env:"VERIFICATION_TOKEN_TOTAL_ATTEMPTS"`
+	// 驗證配置
+	Verification struct {
+		TokenExpiry           int `env:"VERIFICATION_TOKEN_EXPIRY"`
+		TokenLockPeriod       int `env:"VERIFICATION_TOKEN_LOCK_PREIOD"`        // 注意拼寫錯誤保留
+		TokenCountPeriod      int `env:"VERIFICATION_TOKEN_COUNT_PREIOD"`       // 注意拼寫錯誤保留
+		TokenNotifyLockPeriod int `env:"VERIFICATION_TOKEN_NOTIFY_LOCK_PREIOD"` // 注意拼寫錯誤保留
+		TokenTotalAttempts    int `env:"VERIFICATION_TOKEN_TOTAL_ATTEMPTS"`
 	}
 
 	Config struct {
@@ -51,22 +58,15 @@ type (
 		Otel
 		Redis
 		DB
-		VERIFICATION
+		Verification
+		UserUrl
 	}
 )
 
-var (
-	instance *Config
-	once     sync.Once
-)
-
 func GetConfig() *Config {
-	once.Do(func() {
-		config, err := cfgloader.LoadConfigFromEnv[Config]()
-		if err != nil {
-			log.Fatalf("load config from env failed: %v", err)
-		}
-		instance = config
-	})
-	return instance
+	config, err := cfgloader.LoadConfigFromEnv[Config]("user")
+	if err != nil {
+		log.Fatalf("load config from env failed: %v", err)
+	}
+	return config
 }

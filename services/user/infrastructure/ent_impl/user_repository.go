@@ -24,7 +24,7 @@ func NewUserRepository(db db.Database) repository.UserRepository {
 }
 
 func (repo *UserRepository) RegisterUser(ctx context.Context, u *aggregate.User) (*aggregate.User, *mmerror.MmError) {
-	ctx, span := mmotel.StartTrace(ctx)
+	ctx, span := mmotel.StartSpan(ctx, "ApplicationUserService.Register")
 	defer span.End()
 	client := repo.db.GetClient(ctx).(*ent.Client)
 

@@ -21,7 +21,7 @@ func LogAndReturnError(ctx context.Context, code MmCode, message string, err err
 
 	// 創建附加字段
 	extraFields := []mmotel.Field{
-		mmotel.NewField("error", mmErr.Error()),
+		mmotel.NewField("error", mmErr.ErrorWithStack()),
 	}
 
 	// 合併原有字段和附加字段

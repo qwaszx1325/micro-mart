@@ -1,3 +1,4 @@
+// pkg/mmotel/options.go
 package mmotel
 
 // ExporterType 定義導出器類型
