@@ -27,9 +27,6 @@ type (
 		MaxIdle     int    `env:"REDIS_MAX_IDLE_CONNS"`
 		ConnTimeout int    `env:"REDIS_CONN_TIMEOUT_SECS"`
 	}
-	UserUrl struct {
-		UserUrl string `env:"USER_URL"`
-	}
 
 	// 資料庫配置 (PostgreSQL)
 	DB struct {
@@ -59,7 +56,6 @@ type (
 		Redis
 		DB
 		Verification
-		UserUrl
 	}
 )
 

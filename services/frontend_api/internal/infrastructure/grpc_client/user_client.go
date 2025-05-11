@@ -4,8 +4,8 @@ import (
 	"context"
 	"micro-mart/pkg/mmotel"
 	"micro-mart/pkg/pb/gen/user"
+	"micro-mart/services/frontend_api/internal/config"
 	"micro-mart/services/frontend_api/internal/model/request"
-	"micro-mart/services/user/config"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel/propagation"

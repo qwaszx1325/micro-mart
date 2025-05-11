@@ -22,6 +22,7 @@ func NewUserHandler(userClient *grpc_client.UserClient) *UserHandler {
 
 // Register 處理用戶註冊請求
 func (h *UserHandler) Register(c *gin.Context) {
+
 	// 解析請求
 	var req request.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

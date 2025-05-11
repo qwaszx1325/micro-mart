@@ -71,8 +71,8 @@ type (
 	}
 )
 
-func GetConfig(serviceName string) *Config {
-	config, err := cfgloader.LoadConfigFromEnv[Config](serviceName)
+func NewConfig() *Config {
+	config, err := cfgloader.LoadConfigFromEnv[Config]("frontend_api")
 	if err != nil {
 		log.Fatalf("load config from env failed: %v", err)
 	}
