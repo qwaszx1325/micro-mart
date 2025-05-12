@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"encoding/base64"
+	"micro-mart/pkg/utils"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -54,4 +56,32 @@ func (h *UserHandler) Register(c *gin.Context) {
 
 	// 返回註冊結果
 	c.JSON(http.StatusOK, response)
+}
+
+func (h *UserHandler) GenerateRandomKey(c *gin.Context) {
+	// 解析請求
+	var req request.GenerateRandomKeyRequest
+
+	// 綁定查詢參數到結構體
+	if err := c.ShouldBindQuery(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid request: " + err.Error(),
+		})
+		return
+	}
+
+	// 依照request 的數字來創建key的大小
+	jwtKey, err := utils.GenerateRandomKey(req.Length)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Generate random key failed: " + err.Error(),
+		})
+		return
+	}
+
+	// 用base64 輸出密鑰
+	base64JwtKey := base64.StdEncoding.EncodeToString(jwtKey)
+	c.JSON(http.StatusOK, base64JwtKey)
 }

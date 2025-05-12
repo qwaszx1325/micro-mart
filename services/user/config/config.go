@@ -41,13 +41,8 @@ type (
 		AutoMigrate bool   `env:"AUTO_MIGRATE"`
 	}
 
-	// 驗證配置
-	Verification struct {
-		TokenExpiry           int `env:"VERIFICATION_TOKEN_EXPIRY"`
-		TokenLockPeriod       int `env:"VERIFICATION_TOKEN_LOCK_PREIOD"`        // 注意拼寫錯誤保留
-		TokenCountPeriod      int `env:"VERIFICATION_TOKEN_COUNT_PREIOD"`       // 注意拼寫錯誤保留
-		TokenNotifyLockPeriod int `env:"VERIFICATION_TOKEN_NOTIFY_LOCK_PREIOD"` // 注意拼寫錯誤保留
-		TokenTotalAttempts    int `env:"VERIFICATION_TOKEN_TOTAL_ATTEMPTS"`
+	Jwt struct {
+		JwtKey string `env:"JWT_KEY"`
 	}
 
 	Config struct {
@@ -55,7 +50,7 @@ type (
 		Otel
 		Redis
 		DB
-		Verification
+		Jwt
 	}
 )
 

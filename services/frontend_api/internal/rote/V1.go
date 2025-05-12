@@ -47,6 +47,7 @@ func (r *RouteV1) RegisterRoutes(g *gin.Engine) {
 }
 
 func (r *RouteV1) addUserRoutes(g *gin.RouterGroup) {
-	auth := g.Group("/users")
-	auth.POST("register", r.userHandler.Register)
+	user := g.Group("/users")
+	user.POST("register", r.userHandler.Register)
+	user.GET("getKey", r.userHandler.GenerateRandomKey)
 }
