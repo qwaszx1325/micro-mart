@@ -39,9 +39,11 @@ func GenerateJwt(userId string, username string, email string, role string) (str
 func ValidateJWT(tokenStr string) (*Claims, error) {
 	claims := &Claims{}
 
+	jwtKey := []byte(config.GetConfig().JwtKey)
+
 	// 解析並驗證 token
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-		return config.GetConfig().JwtKey, nil
+		return jwtKey, nil
 	})
 
 	if err != nil || !token.Valid {

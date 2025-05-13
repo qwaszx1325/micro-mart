@@ -16,40 +16,38 @@ import (
 )
 
 func NewGrpcServer(lc fx.Lifecycle, userService *application.UserService) *grpc.Server {
-	// 獲取配置
 	cfg := config.GetConfig()
 
-	// 創建新的grpc伺服器
+	// 提早初始化 Tracer
+	shutdown := mmotel.InitTracer(cfg.ServiceName,
+		mmotel.WithJaegerExporter(cfg.OtelUrl),
+		mmotel.WithSamplingRatio(1.0),
+	)
+
+	// 建立 gRPC server，此時 Tracer 已初始化完成
 	s := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			mmotel.UnaryTraceInterceptor(),
-			mmotel.ErrorLoggingInterceptor(), // 添加錯誤日誌攔截器
+			mmotel.ErrorLoggingInterceptor(),
 		),
 		grpc.ChainStreamInterceptor(
 			mmotel.StreamTraceInterceptor(),
-			mmotel.StreamErrorLoggingInterceptor(), // 添加流式錯誤日誌攔截器
+			mmotel.StreamErrorLoggingInterceptor(),
 		),
 	)
 
-	var shutdown func()
+	// lifecycle 管理
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			// 初始化追蹤器
-			shutdown = mmotel.InitTracer(cfg.ServiceName,
-				mmotel.WithJaegerExporter(cfg.OtelUrl), // 假設有 Jaeger 端點配置
-			)
-
-			// 監聽端口
+			// 監聽
 			lis, err := net.Listen("tcp", cfg.ServiceUrl)
 			if err != nil {
 				log.Fatalf("監聽失敗: %v", err)
 				return err
 			}
 
-			// 註冊服務
 			user.RegisterUserServiceServer(s, userService)
 
-			// 啟動服務
 			go func() {
 				ctx := context.WithValue(context.Background(), "service_name", cfg.Host.ServiceName)
 				if err := s.Serve(lis); err != nil {
@@ -61,14 +59,8 @@ func NewGrpcServer(lc fx.Lifecycle, userService *application.UserService) *grpc.
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			// 優雅停止服務
 			s.GracefulStop()
-
-			// 關閉追蹤器
-			if shutdown != nil {
-				shutdown()
-			}
-
+			shutdown()
 			mmotel.Info(ctx, "gRPC服務已優雅停止")
 			return nil
 		},

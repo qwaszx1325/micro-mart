@@ -9,6 +9,7 @@ import (
 	"micro-mart/services/user/domain/entity"
 	"micro-mart/services/user/domain/repository"
 	"micro-mart/services/user/infrastructure/ent_impl/ent"
+	"time"
 )
 
 type UserRepository struct {
@@ -28,10 +29,16 @@ func (repo *UserRepository) RegisterUser(ctx context.Context, u *aggregate.User)
 	defer span.End()
 	client := repo.db.GetClient(ctx).(*ent.Client)
 
+	// 獲取當前時間用於設置創建時間和更新時間
+	now := time.Now()
+
+	// 創建用戶記錄
 	entUser, err := client.User.Create().
 		SetEmail(u.Profile.Email).
 		SetUsername(u.Profile.Name).
-		SetPassword(u.Profile.Password).
+		SetPasswordHash(u.Profile.Password). // 注意：實際應用中應使用雜湊後的密碼
+		SetCreatedAt(now).                   // 明確設置創建時間
+		SetUpdatedAt(now).                   // 明確設置更新時間
 		Save(ctx)
 
 	if err != nil {
@@ -39,12 +46,15 @@ func (repo *UserRepository) RegisterUser(ctx context.Context, u *aggregate.User)
 		mmotel.Error(ctx, "Register user failed", mmotel.NewField("err", err))
 		return nil, mmerror.New(mmerror.InternalServerError, "register user fail")
 	}
+	// 將數據庫實體轉換為領域模型
 	user := &aggregate.User{
 		ID: entUser.ID,
 		Profile: entity.Profile{
-			Email:    entUser.Email,
-			Name:     entUser.Username,
-			Password: entUser.Password,
+			Email:     entUser.Email,
+			Name:      entUser.Username,
+			Password:  entUser.PasswordHash,
+			CreatedAt: entUser.CreatedAt, // 將創建時間放入 Profile 中
+			UpdatedAt: entUser.UpdatedAt, // 將更新時間放入 Profile 中
 		},
 	}
 

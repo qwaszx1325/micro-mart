@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.uber.org/fx"
 	"micro-mart/pkg/helper"
 	mmerror "micro-mart/pkg/mm_error"
@@ -41,6 +42,9 @@ func NewHttpServer(
 
 			r := gin.New()
 
+			// jaeger trace用的中間件
+			r.Use(otelgin.Middleware("frontend-api"))
+			
 			// Register the routes
 			route.RegisterRoutes(r)
 
