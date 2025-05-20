@@ -8,6 +8,7 @@ import (
 	mmerror "micro-mart/pkg/mm_error"
 	"micro-mart/pkg/mmotel"
 	"micro-mart/pkg/pb/gen/user"
+	"micro-mart/pkg/utils"
 	"micro-mart/services/user/domain/aggregate"
 	"micro-mart/services/user/domain/entity"
 	"micro-mart/services/user/domain/service"
@@ -45,11 +46,13 @@ func (s *UserService) Register(ctx context.Context, req *user.RegisterRequest) (
 		return nil, status.Error(codes.InvalidArgument, "Email, username and password are required")
 	}
 
+	hashPassword, _ := utils.HashPassword(req.GetPassword())
+
 	// Create user profile
 	profile := entity.Profile{
 		Email:    req.GetEmail(),
 		Name:     req.GetUsername(),
-		Password: req.GetPassword(),
+		Password: hashPassword,
 	}
 
 	u := &aggregate.User{
