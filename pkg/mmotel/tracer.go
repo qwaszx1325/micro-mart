@@ -307,50 +307,6 @@ func SpanFromContext(ctx context.Context) trace.Span {
 	return trace.SpanFromContext(ctx)
 }
 
-// 日誌相關函數
-
-// Info 記錄一個信息級別的日誌
-func Info(ctx context.Context, message string, fields ...interface{}) {
-	span := SpanFromContext(ctx)
-	if span == nil || !span.IsRecording() {
-		// 如果 span 不是有效的或不在記錄，只打印到標準日誌
-		log.Printf("[INFO] %s %v", message, fields)
-		return
-	}
-
-	// 添加事件到 span
-	attrs := convertFieldsToAttributes(fields)
-	AddEvent(span, "INFO: "+message, attrs...)
-
-	// 同時打印到標準日誌
-	log.Printf("[INFO] %s", message)
-}
-
-// Error 記錄一個錯誤級別的日誌
-func Error(ctx context.Context, message string, fields ...Field) {
-	span := SpanFromContext(ctx)
-	if span == nil || !span.IsRecording() {
-		// 如果 span 不是有效的或不在記錄，只打印到標準日誌
-		log.Printf("[ERROR] %s %v", message, fields)
-		return
-	}
-
-	// 添加事件到 span
-	attrs := convertFieldArrayToAttributes(fields)
-	AddEvent(span, "ERROR: "+message, attrs...)
-
-	// 尋找錯誤對象
-	for _, field := range fields {
-		if errVal, ok := field.Value.(error); ok {
-			RecordError(span, errVal)
-			break
-		}
-	}
-
-	// 同時打印到標準日誌
-	log.Printf("[ERROR] %s", message)
-}
-
 // 將字段轉換為屬性
 func convertFieldsToAttributes(fields []interface{}) []attribute.KeyValue {
 	var attrs []attribute.KeyValue

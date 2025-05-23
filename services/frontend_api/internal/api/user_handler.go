@@ -1,13 +1,15 @@
 package api
 
 import (
-	"context"
 	"encoding/base64"
+	mmerror "micro-mart/pkg/mm_error"
+	"micro-mart/pkg/mmotel"
+	"micro-mart/pkg/responder"
 	"micro-mart/pkg/utils"
+	"micro-mart/services/frontend_api/internal/model/response"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"micro-mart/pkg/mmotel"
 	"micro-mart/services/frontend_api/internal/infrastructure/grpc_client"
 	"micro-mart/services/frontend_api/internal/model/request"
 )
@@ -24,38 +26,35 @@ func NewUserHandler(userClient *grpc_client.UserClient) *UserHandler {
 
 // Register 處理用戶註冊請求
 func (h *UserHandler) Register(c *gin.Context) {
-
 	// 解析請求
 	var req request.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"message": "Invalid request: " + err.Error(),
-		})
+		mmErr := mmerror.New(mmerror.AccountPasswordError, "Invalid request:", err)
+		mmotel.Warn(c.Request.Context(), "Invalid request: "+err.Error())
+		responder.Error(mmErr).WithContext(c)
 		return
 	}
 
-	// 使用 mmotel 包裝 span
 	ctx := c.Request.Context()
-	var response interface{}
-	var err error
 
-	err = mmotel.WithSpan(ctx, "UserHandler.Register", func(ctx context.Context) error {
-		// 調用 user client 的 Register 方法
-		response, err = h.userClient.Register(ctx, &req)
-		return err
-	})
+	resp, err := h.userClient.Register(ctx, &req)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"message": "Registration failed: " + err.Error(),
-		})
+		responder.Error(err).WithContext(c)
 		return
 	}
 
-	// 返回註冊結果
-	c.JSON(http.StatusOK, response)
+	// 設定 HttpOnly + Secure Cookie
+	refreshToken := resp.RefreshToken
+	// 正式環境 secure 才設定為 true (https)
+	//c.SetCookie("refresh_token", refreshToken, 30*24*60*60, "/", "", true, true) // 30天, Secure + HttpOnly
+	c.SetCookie("refresh_token", refreshToken, 30*24*60*60, "/", "", false, true) // 30天, Secure + HttpOnly
+
+	// 回傳其餘資料（AccessToken 或其他資訊）
+	responder.Ok(response.GetAccessTokenResponse{
+		Success:     true,
+		AccessToken: resp.AccessToken,
+	}).WithContext(c)
 }
 
 func (h *UserHandler) GenerateRandomKey(c *gin.Context) {

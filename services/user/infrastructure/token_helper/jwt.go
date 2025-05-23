@@ -16,9 +16,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func GenerateJwt(userId uuid.UUID, username string, email string, role string) (string, error) {
-	//設定過期時間
-	expirationTime := time.Now().Add(1 * time.Hour)
+func GenerateJwt(userId uuid.UUID, username string, email string, role string, expirationTime time.Time) (string, error) {
 
 	//建立claims
 	claims := Claims{

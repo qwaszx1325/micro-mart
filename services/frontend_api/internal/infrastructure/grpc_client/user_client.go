@@ -2,6 +2,7 @@ package grpc_client
 
 import (
 	"context"
+	mmerror "micro-mart/pkg/mm_error"
 	"micro-mart/pkg/mmotel"
 	"micro-mart/pkg/pb/gen/user"
 	"micro-mart/services/frontend_api/internal/config"
@@ -45,23 +46,28 @@ func NewUserClient(cfg *config.Config) (*UserClient, error) {
 }
 
 // Register 用戶註冊
-func (c *UserClient) Register(ctx context.Context, req *request.RegisterRequest) (*user.AuthResponse, error) {
-	// 使用 mmotel 包裝 span
-	var response *user.AuthResponse
-	var err error
+func (c *UserClient) Register(ctx context.Context, req *request.RegisterRequest) (*user.AuthResponse, *mmerror.MmError) {
 
-	err = mmotel.WithSpan(ctx, "UserClient.Register", func(ctx context.Context) error {
-		// 將前端請求轉換為 gRPC 請求
-		grpcReq := &user.RegisterRequest{
-			Username: req.UserName,
-			Email:    req.Email,
-			Password: req.Password,
+	grpcReq := &user.RegisterRequest{
+		Username: req.UserName,
+		Email:    req.Email,
+		Password: req.Password,
+	}
+	// create user as auth identity
+	response, grpcErr := c.userGrpcClient.Register(ctx, grpcReq)
+
+	ctx, span := mmotel.StartSpan(ctx, "Register")
+	defer span.End()
+	if grpcErr != nil {
+		errConverted, ok := mmerror.FromGrpcErr(grpcErr)
+		if ok {
+			mmotel.Error(ctx, errConverted.Error())
+			return nil, errConverted
 		}
+		err := mmerror.New(mmerror.InternalServerError, "can't found the kgsErr from grpcErr", grpcErr)
+		mmotel.Error(ctx, err.Error())
+		return nil, err
+	}
 
-		// 調用 gRPC 服務
-		response, err = c.userGrpcClient.Register(ctx, grpcReq)
-		return err
-	})
-
-	return response, err
+	return response, nil
 }

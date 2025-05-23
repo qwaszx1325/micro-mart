@@ -37,8 +37,8 @@ func (repo *UserRepository) RegisterUser(ctx context.Context, u *aggregate.User)
 		SetEmail(u.Profile.Email).
 		SetUsername(u.Profile.Name).
 		SetPasswordHash(u.Profile.Password). // 注意：實際應用中應使用雜湊後的密碼
-		SetCreatedAt(now). // 明確設置創建時間
-		SetUpdatedAt(now). // 明確設置更新時間
+		SetCreatedAt(now).                   // 明確設置創建時間
+		SetUpdatedAt(now).                   // 明確設置更新時間
 		Save(ctx)
 
 	if err != nil {

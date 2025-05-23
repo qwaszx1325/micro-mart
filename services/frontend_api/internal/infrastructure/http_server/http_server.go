@@ -11,8 +11,9 @@ import (
 	"micro-mart/pkg/helper"
 	mmerror "micro-mart/pkg/mm_error"
 	"micro-mart/pkg/mmotel"
+	"micro-mart/pkg/responder"
 	"micro-mart/services/frontend_api/internal/config"
-	route "micro-mart/services/frontend_api/internal/rote"
+	route "micro-mart/services/frontend_api/internal/route"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -44,6 +45,9 @@ func NewHttpServer(
 
 			// jaeger trace用的中間件
 			r.Use(otelgin.Middleware("frontend-api"))
+
+			//response 的中間件
+			r.Use(responder.GinResponser())
 			
 			// Register the routes
 			route.RegisterRoutes(r)

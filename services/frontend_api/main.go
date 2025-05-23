@@ -5,7 +5,7 @@ import (
 	"micro-mart/services/frontend_api/internal/config"
 	"micro-mart/services/frontend_api/internal/infrastructure/grpc_client"
 	"micro-mart/services/frontend_api/internal/infrastructure/http_server"
-	route "micro-mart/services/frontend_api/internal/rote"
+	route "micro-mart/services/frontend_api/internal/route"
 	"net/http"
 )
 

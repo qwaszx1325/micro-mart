@@ -13,6 +13,7 @@ import (
 	"micro-mart/services/user/domain/entity"
 	"micro-mart/services/user/domain/service"
 	"micro-mart/services/user/infrastructure/token_helper"
+	"time"
 )
 
 type UserService struct {
@@ -96,8 +97,14 @@ func (s *UserService) Register(ctx context.Context, req *user.RegisterRequest) (
 		mmotel.Error(ctx, "Failed to commit transaction", mmotel.NewField("error", commitErr))
 		return nil, status.Error(codes.Internal, "Failed to complete registration")
 	}
-	accessToken, _ := token_helper.GenerateJwt(userProfile.ID, userProfile.Profile.Name, userProfile.Profile.Email, "測試用")
-	refreshToken := "refresh-token-would-be-generated-here"
+	// Access Token：1小時有效
+	accessTokenExpirationTime := time.Now().Add(1 * time.Hour)
+
+	// Refresh Token：30天有效
+	refreshTokenExpirationTime := time.Now().Add(30 * 24 * time.Hour)
+
+	accessToken, _ := token_helper.GenerateJwt(userProfile.ID, userProfile.Profile.Name, userProfile.Profile.Email, "測試用", accessTokenExpirationTime)
+	refreshToken, _ := token_helper.GenerateJwt(userProfile.ID, userProfile.Profile.Name, userProfile.Profile.Email, "測試用", refreshTokenExpirationTime)
 	expiresAt := int64(3600) // 1 hour in seconds
 
 	return &user.AuthResponse{
