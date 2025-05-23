@@ -12,6 +12,7 @@ import (
 	"micro-mart/services/user/domain/aggregate"
 	"micro-mart/services/user/domain/entity"
 	"micro-mart/services/user/domain/service"
+	"micro-mart/services/user/infrastructure/token_helper"
 )
 
 type UserService struct {
@@ -67,7 +68,7 @@ func (s *UserService) Register(ctx context.Context, req *user.RegisterRequest) (
 	}
 
 	// Register user
-	_, mmErr := s.userService.Register(ctx, u)
+	userProfile, mmErr := s.userService.Register(ctx, u)
 	if mmErr != nil {
 		// Rollback transaction
 		_, rollbackErr := s.db.Rollback(ctx)
@@ -95,13 +96,7 @@ func (s *UserService) Register(ctx context.Context, req *user.RegisterRequest) (
 		mmotel.Error(ctx, "Failed to commit transaction", mmotel.NewField("error", commitErr))
 		return nil, status.Error(codes.Internal, "Failed to complete registration")
 	}
-
-	// Generate tokens (this is a placeholder - real implementation would generate actual tokens)
-	// In a real implementation, you would:
-	// 1. Generate JWT tokens with appropriate claims
-	// 2. Set proper expiration times
-	// 3. Store refresh token in database
-	accessToken := "jwt-token-would-be-generated-here"
+	accessToken, _ := token_helper.GenerateJwt(userProfile.ID, userProfile.Profile.Name, userProfile.Profile.Email, "測試用")
 	refreshToken := "refresh-token-would-be-generated-here"
 	expiresAt := int64(3600) // 1 hour in seconds
 
