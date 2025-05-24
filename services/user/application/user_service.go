@@ -103,8 +103,8 @@ func (s *UserService) Register(ctx context.Context, req *user.RegisterRequest) (
 	// Refresh Token：30天有效
 	refreshTokenExpirationTime := time.Now().Add(30 * 24 * time.Hour)
 
-	accessToken, _ := token_helper.GenerateJwt(userProfile.ID, userProfile.Profile.Name, userProfile.Profile.Email, "測試用", accessTokenExpirationTime)
-	refreshToken, _ := token_helper.GenerateJwt(userProfile.ID, userProfile.Profile.Name, userProfile.Profile.Email, "測試用", refreshTokenExpirationTime)
+	accessToken, _ := token_helper.GenerateAccessToken(ctx, userProfile.ID, userProfile.Profile.Name, userProfile.Profile.Email, "測試用", accessTokenExpirationTime)
+	refreshToken, _ := token_helper.GenerateRefreshToken(ctx, userProfile.ID, userProfile.Profile.Name, userProfile.Profile.Email, "測試用", refreshTokenExpirationTime)
 	expiresAt := int64(3600) // 1 hour in seconds
 
 	return &user.AuthResponse{
