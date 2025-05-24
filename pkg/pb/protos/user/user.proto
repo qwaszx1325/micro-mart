@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "/user";
+
+service UserService {
+  // 註冊後自動登入 所以也回傳所有檔案
+  rpc Register(RegisterRequest) returns (LoginResponse) {}
+  rpc Login(LoginRequest) returns (LoginResponse) {}
+}
+
+message RegisterRequest {
+  string username = 1;
+  string email = 2;
+  string password = 3;
+}
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  bool success = 1;
+  string message = 2;
+  string user_id = 3;
+  string username = 4;
+  string email = 5;
+  string role = 6;
+}

@@ -23,7 +23,7 @@ type (
 		Password    string `env:"REDIS_PASSWORD"`
 		DB          int    `env:"REDIS_DB"`
 		MaxActive   int    `env:"REDIS_MAX_ACTIVE_CONNS"`
-		MinIdle     int    `env:"REDIS_MIN_IDLE_CONNS"`
+		MinIdle     int    `env:"REDIS_MIX_IDLE_CONNS"`
 		MaxIdle     int    `env:"REDIS_MAX_IDLE_CONNS"`
 		ConnTimeout int    `env:"REDIS_CONN_TIMEOUT_SECS"`
 	}
@@ -55,7 +55,7 @@ type (
 )
 
 func GetConfig() *Config {
-	config, err := cfgloader.LoadConfigFromEnv[Config]("user")
+	config, err := cfgloader.LoadConfigFromEnv[Config]("auth")
 	if err != nil {
 		log.Fatalf("load config from env failed: %v", err)
 	}

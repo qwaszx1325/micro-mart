@@ -21,10 +21,6 @@ type (
 		AuthUrl string `env:"AUTH_URL"`
 	}
 
-	Merchant struct {
-		MerchantUrl string `env:"MERCHANT_URL"`
-	}
-
 	User struct {
 		UserUrl string `env:"USER_URL"`
 	}
@@ -64,7 +60,6 @@ type (
 		Host
 		Otel
 		Auth
-		Merchant
 		User
 		Redis
 		DBs

@@ -55,7 +55,6 @@ func (r *RedisCache) Set(ctx context.Context, key string, value string, expirati
 	// Start trace
 	ctx, span := mmotel.StartTrace(ctx)
 	defer span.End()
-
 	// Set value in Redis
 	err := r.client.Set(ctx, key, value, expiration).Err()
 	if err != nil {
@@ -128,7 +127,7 @@ func (r *RedisCache) SetObject(ctx context.Context, key string, value any, expir
 
 func (r *RedisCache) Delete(ctx context.Context, keys ...string) *mmerror.MmError {
 	// Start trace
-	ctx, span := mmotel.StartSpan(ctx)
+	ctx, span := mmotel.StartSpan(ctx, "delete key: "+keys[0])
 	defer span.End()
 
 	// Delete key from Redis

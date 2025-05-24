@@ -3,26 +3,24 @@ package grpc_client
 import (
 	"context"
 	"fmt"
-	mmerror "micro-mart/pkg/mm_error"
-	"micro-mart/pkg/mmotel"
-	"micro-mart/pkg/pb/gen/user"
-	"micro-mart/services/frontend_api/internal/config"
-	"micro-mart/services/frontend_api/internal/model/request"
-
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel/propagation"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	mmerror "micro-mart/pkg/mm_error"
+	"micro-mart/pkg/mmotel"
+	"micro-mart/pkg/pb/gen/auth"
+	"micro-mart/services/frontend_api/internal/config"
 )
 
-type UserClient struct {
+type AuthClient struct {
 	conn           *grpc.ClientConn
-	userGrpcClient user.UserServiceClient
+	authGrpcClient auth.AuthServiceClient
 }
 
-func NewUserClient(cfg *config.Config) (*UserClient, error) {
+func NewAuthClient(cfg *config.Config) (*AuthClient, error) {
 	// Get address from config
-	grpcAddr := cfg.UserUrl
+	grpcAddr := cfg.AuthUrl
 
 	// New grpc client with tracing middleware
 	conn, err := grpc.Dial(
@@ -36,30 +34,29 @@ func NewUserClient(cfg *config.Config) (*UserClient, error) {
 		)),
 	)
 	if err != nil {
-		return &UserClient{}, err
+		return &AuthClient{}, err
 	}
-	userGrpc := user.NewUserServiceClient(conn)
+	authGrpc := auth.NewAuthServiceClient(conn)
 
-	return &UserClient{
+	return &AuthClient{
 		conn:           conn,
-		userGrpcClient: userGrpc,
+		authGrpcClient: authGrpc,
 	}, nil
 }
 
-// Register 用戶註冊
-func (c *UserClient) Register(ctx context.Context, req *request.RegisterRequest) (*user.LoginResponse, *mmerror.MmError) {
+// 取得access token 和 refresh token
+func (c *AuthClient) GenerateTokens(ctx context.Context, userId string, username string, email string, role string) (*auth.AuthTokenResponse, *mmerror.MmError) {
 
-	grpcReq := &user.RegisterRequest{
-		Username: req.UserName,
-		Email:    req.Email,
-		Password: req.Password,
+	grpcReq := &auth.GenerateTokenRequest{
+		UserId:   userId,
+		Username: username,
+		Email:    email,
+		Role:     role,
 	}
-	// create user as auth identity
-	response, grpcErr := c.userGrpcClient.Register(ctx, grpcReq)
 
-	fmt.Print(grpcErr)
-	ctx, span := mmotel.StartSpan(ctx, "Register")
-	defer span.End()
+	fmt.Println("hi")
+
+	response, grpcErr := c.authGrpcClient.GenerateTokens(ctx, grpcReq)
 	if grpcErr != nil {
 		errConverted, ok := mmerror.FromGrpcErr(grpcErr)
 		if ok {
@@ -70,6 +67,6 @@ func (c *UserClient) Register(ctx context.Context, req *request.RegisterRequest)
 		mmotel.Error(ctx, err.Error())
 		return nil, err
 	}
-
 	return response, nil
+
 }

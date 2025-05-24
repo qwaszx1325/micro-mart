@@ -8,6 +8,7 @@ import (
 	"micro-mart/services/user/infrastructure/db_impl"
 	"micro-mart/services/user/infrastructure/ent_impl"
 	"micro-mart/services/user/infrastructure/grpc_impl"
+	"micro-mart/services/user/infrastructure/redis_impl"
 )
 
 func main() {
@@ -19,6 +20,7 @@ func main() {
 			application.NewUserService,
 			service.NewUserService,
 			ent_impl.NewUserRepository,
+			redis_impl.NewRedisClient,
 		),
 		fx.Invoke(
 			func(server *grpc.Server) {},

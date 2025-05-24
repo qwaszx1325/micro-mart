@@ -16,11 +16,13 @@ import (
 
 type UserHandler struct {
 	userClient *grpc_client.UserClient
+	authClient *grpc_client.AuthClient
 }
 
-func NewUserHandler(userClient *grpc_client.UserClient) *UserHandler {
+func NewUserHandler(userClient *grpc_client.UserClient, authClient *grpc_client.AuthClient) *UserHandler {
 	return &UserHandler{
 		userClient: userClient,
+		authClient: authClient,
 	}
 }
 
@@ -37,15 +39,20 @@ func (h *UserHandler) Register(c *gin.Context) {
 
 	ctx := c.Request.Context()
 
-	resp, err := h.userClient.Register(ctx, &req)
+	userResp, err := h.userClient.Register(ctx, &req)
 
 	if err != nil {
 		responder.Error(err).WithContext(c)
 		return
 	}
+	authResp, err := h.authClient.GenerateTokens(ctx, userResp.UserId, userResp.Username, userResp.Email, userResp.Role)
 
+	if err != nil {
+		responder.Error(err).WithContext(c)
+		return
+	}
 	// 設定 HttpOnly + Secure Cookie
-	refreshToken := resp.RefreshToken
+	refreshToken := authResp.RefreshToken
 	// 正式環境 secure 才設定為 true (https)
 	//c.SetCookie("refresh_token", refreshToken, 30*24*60*60, "/", "", true, true) // 30天, Secure + HttpOnly
 	c.SetCookie("refresh_token", refreshToken, 30*24*60*60, "/", "", false, true) // 30天, Secure + HttpOnly
@@ -53,7 +60,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 	// 回傳其餘資料（AccessToken 或其他資訊）
 	responder.Ok(response.GetAccessTokenResponse{
 		Success:     true,
-		AccessToken: resp.AccessToken,
+		AccessToken: authResp.AccessToken,
 	}).WithContext(c)
 }
 

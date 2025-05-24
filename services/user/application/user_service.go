@@ -2,8 +2,6 @@ package application
 
 import (
 	"context"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"micro-mart/pkg/db"
 	mmerror "micro-mart/pkg/mm_error"
 	"micro-mart/pkg/mmotel"
@@ -12,8 +10,11 @@ import (
 	"micro-mart/services/user/domain/aggregate"
 	"micro-mart/services/user/domain/entity"
 	"micro-mart/services/user/domain/service"
-	"micro-mart/services/user/infrastructure/token_helper"
+	"micro-mart/services/user/domain/token_helper"
 	"time"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type UserService struct {
@@ -31,7 +32,7 @@ func NewUserService(userService *service.UserService, db db.Database) *UserServi
 	}
 }
 
-func (s *UserService) Register(ctx context.Context, req *user.RegisterRequest) (*user.AuthResponse, error) {
+func (s *UserService) Register(ctx context.Context, req *user.RegisterRequest) (*user.LoginResponse, error) {
 	ctx, span := mmotel.StartSpan(ctx, "ApplicationUserService.Register")
 	defer span.End()
 
@@ -97,26 +98,42 @@ func (s *UserService) Register(ctx context.Context, req *user.RegisterRequest) (
 		mmotel.Error(ctx, "Failed to commit transaction", mmotel.NewField("error", commitErr))
 		return nil, status.Error(codes.Internal, "Failed to complete registration")
 	}
+
 	// Access Token：1小時有效
 	accessTokenExpirationTime := time.Now().Add(1 * time.Hour)
 
 	// Refresh Token：30天有效
 	refreshTokenExpirationTime := time.Now().Add(30 * 24 * time.Hour)
 
-	accessToken, _ := token_helper.GenerateAccessToken(ctx, userProfile.ID, userProfile.Profile.Name, userProfile.Profile.Email, "測試用", accessTokenExpirationTime)
-	refreshToken, _ := token_helper.GenerateRefreshToken(ctx, userProfile.ID, userProfile.Profile.Name, userProfile.Profile.Email, "測試用", refreshTokenExpirationTime)
+	accessToken, err := token_helper.GenerateAccessToken(ctx, userProfile.ID, userProfile.Profile.Name, userProfile.Profile.Email, "測試用", accessTokenExpirationTime)
+	if err != nil {
+		mmotel.Error(ctx, "Failed to generate access token", mmotel.NewField("error", err))
+		return nil, status.Error(codes.Internal, "Failed to generate access token")
+	}
+
+	refreshToken, err := token_helper.GenerateRefreshToken(ctx, userProfile.ID, userProfile.Profile.Name, userProfile.Profile.Email, "測試用", refreshTokenExpirationTime)
+	if err != nil {
+		mmotel.Error(ctx, "Failed to generate refresh token", mmotel.NewField("error", err))
+		return nil, status.Error(codes.Internal, "Failed to generate refresh token")
+	}
+
 	expiresAt := int64(3600) // 1 hour in seconds
 
-	return &user.AuthResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
+	return &user.LoginResponse{
 		Message:      "Registration successful",
 		Success:      true,
+		UserId:       userProfile.ID.String(),
+		Username:     userProfile.Profile.Name,
+		Email:        userProfile.Profile.Email,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 		ExpiresAt:    expiresAt,
+		// 暫時還沒有搞role所以先隨便設定
+		Role: "user",
 	}, nil
 }
 
-func (s *UserService) Login(ctx context.Context, req *user.LoginRequest) (*user.AuthResponse, error) {
+func (s *UserService) Login(ctx context.Context, req *user.LoginRequest) (*user.LoginResponse, error) {
 	//ctx, span := mmotel.StartSpan(ctx, "ApplicationUserService.Login")
 	//defer span.End()
 	//
@@ -170,9 +187,5 @@ func (s *UserService) Login(ctx context.Context, req *user.LoginRequest) (*user.
 	//	RefreshToken:  refreshToken,
 	//	ExpiresAt:     expiresAt,
 	//}, nil
-	return nil, nil
-}
-func (s *UserService) RefreshToken(ctx context.Context, req *user.RefreshTokenRequest) (*user.AuthResponse, error) {
-
 	return nil, nil
 }

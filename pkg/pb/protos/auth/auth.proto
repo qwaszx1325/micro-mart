@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "/auth";
+
+service AuthService {
+  // 根據 user 資訊產生 access/refresh token
+  rpc GenerateTokens(GenerateTokenRequest) returns (AuthTokenResponse) {}
+
+  // 驗證 refresh token 並重新簽發 access token
+  rpc RefreshToken(RefreshTokenRequest) returns (AuthTokenResponse) {}
+
+  // 驗證 access token 並回傳使用者資訊
+  rpc GetUserProfile(AccessTokenRequest) returns (GetUserProfileResponse) {}
+}
+
+message GenerateTokenRequest {
+  string user_id = 1;
+  string username = 2;
+  string email = 3;
+  string role = 4;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message AccessTokenRequest {
+  string access_token = 1;
+}
+
+message GetUserProfileResponse {
+  string user_id = 1;
+  string username = 2;
+  string email = 3;
+  string role = 4;
+}
+
+message AuthTokenResponse {
+  bool success = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+  int64 expires_at = 4; // access token 過期時間戳
+}

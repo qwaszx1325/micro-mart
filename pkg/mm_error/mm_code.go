@@ -56,7 +56,7 @@ const (
 // HttpCode returns the standard HTTP status code.
 func (c MmCode) HttpCode() int {
 
-	// Get the http code from the KgsCode
+	// Get the http code from the MmCode
 	httpCode := int(c) / 10000
 
 	// Check if the http code is valid
@@ -92,7 +92,7 @@ func (c MmCode) GrpcCode() codes.Code {
 	}
 }
 
-// Int returns the integer value of the KgsCode.
+// Int returns the integer value of the MmCode.
 func (c MmCode) Int() int {
 	return int(c)
 }
