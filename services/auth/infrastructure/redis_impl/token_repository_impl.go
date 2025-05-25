@@ -31,7 +31,6 @@ func (t *TokenRepository) StoreRefreshToken(ctx context.Context, token string, u
 	if mmErr != nil {
 		return mmerror.New(mmerror.InternalServerError, "failed to store refresh token", err)
 	}
-
 	return nil
 }
 

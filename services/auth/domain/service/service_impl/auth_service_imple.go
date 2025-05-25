@@ -76,8 +76,8 @@ func (s *AuthService) GenerateRefreshToken(ctx context.Context, userId string, u
 	}
 	ttl := time.Until(expirationTime)
 
-	err = s.tokenRepo.StoreRefreshToken(ctx, tokenString, userInfo, ttl)
-	if err != nil {
+	mmErr := s.tokenRepo.StoreRefreshToken(ctx, tokenString, userInfo, ttl)
+	if mmErr != nil {
 		mmotel.Error(ctx, "failed to store refresh token")
 		return "", mmerror.New(mmerror.InternalServerError, "failed to store refresh token")
 	}
