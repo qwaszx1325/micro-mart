@@ -41,16 +41,24 @@ type (
 		AutoMigrate bool   `env:"AUTO_MIGRATE"`
 	}
 
+	// 外部服務配置
+	Services struct {
+		UserUrl string `env:"USER_URL"`
+		AuthUrl string `env:"AUTH_URL"`
+	}
+
 	Config struct {
 		Host
 		Otel
 		Redis
 		DB
+		Services
+		RecoveryInterval int `env:"RECOVERY_INTERVAL_SECS" default:"60"`
 	}
 )
 
 func GetConfig() *Config {
-	config, err := cfgloader.LoadConfigFromEnv[Config]("user")
+	config, err := cfgloader.LoadConfigFromEnv[Config]("transaction-orchestrator")
 	if err != nil {
 		log.Fatalf("load config from env failed: %v", err)
 	}

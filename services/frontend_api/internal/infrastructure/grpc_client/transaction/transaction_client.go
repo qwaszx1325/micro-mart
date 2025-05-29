@@ -4,7 +4,7 @@ import (
 	"context"
 	mmerror "micro-mart/pkg/mm_error"
 	"micro-mart/pkg/mmotel"
-	pb "micro-mart/pkg/pb/gen/micro-mart/pkg/pb/gen/transaction"
+	pb "micro-mart/pkg/pb/gen/transaction"
 	"micro-mart/services/frontend_api/internal/model/request"
 
 	"google.golang.org/grpc"

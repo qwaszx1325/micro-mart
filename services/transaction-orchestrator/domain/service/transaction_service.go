@@ -114,7 +114,7 @@ func (s *TransactionService) RegisterUserTransaction(ctx context.Context, req *R
 	}
 
 	// Save transaction record
-	err := s.transactionRepo.SaveTransaction(ctx, tx)
+	err := s.transactionRepo.SaveTransaction(ctx, tx.ToAggregate())
 	if err != nil {
 		mmotel.Error(ctx, "Failed to save transaction: "+err.Error())
 		return nil, err
@@ -128,7 +128,7 @@ func (s *TransactionService) RegisterUserTransaction(ctx context.Context, req *R
 		tx.Steps[0].Status = "FAILED"
 		tx.UpdatedAt = time.Now()
 		tx.Steps[0].UpdatedAt = time.Now()
-		s.transactionRepo.UpdateTransaction(ctx, tx)
+		s.transactionRepo.UpdateTransaction(ctx, tx.ToAggregate())
 
 		mmotel.Error(ctx, "User registration failed: "+err.Error())
 		return nil, err
@@ -156,7 +156,7 @@ func (s *TransactionService) RegisterUserTransaction(ctx context.Context, req *R
 	tx.Steps[1].UpdatedAt = time.Now()
 	tx.UpdatedAt = time.Now()
 
-	err = s.transactionRepo.UpdateTransaction(ctx, tx)
+	err = s.transactionRepo.UpdateTransaction(ctx, tx.ToAggregate())
 	if err != nil {
 		mmotel.Error(ctx, "Failed to update transaction: "+err.Error())
 	}
@@ -170,7 +170,7 @@ func (s *TransactionService) RegisterUserTransaction(ctx context.Context, req *R
 		tx.UpdatedAt = time.Now()
 		tx.Steps[1].UpdatedAt = time.Now()
 
-		err = s.transactionRepo.UpdateTransaction(ctx, tx)
+		err = s.transactionRepo.UpdateTransaction(ctx, tx.ToAggregate())
 		if err != nil {
 			mmotel.Error(ctx, "Failed to update transaction: "+err.Error())
 		}
@@ -186,7 +186,7 @@ func (s *TransactionService) RegisterUserTransaction(ctx context.Context, req *R
 		tx.Status = model.StatusRolledBack
 		tx.UpdatedAt = time.Now()
 
-		err = s.transactionRepo.UpdateTransaction(ctx, tx)
+		err = s.transactionRepo.UpdateTransaction(ctx, tx.ToAggregate())
 		if err != nil {
 			mmotel.Error(ctx, "Failed to update transaction: "+err.Error())
 		}
@@ -201,7 +201,7 @@ func (s *TransactionService) RegisterUserTransaction(ctx context.Context, req *R
 	tx.UpdatedAt = time.Now()
 	tx.Steps[1].UpdatedAt = time.Now()
 
-	err = s.transactionRepo.UpdateTransaction(ctx, tx)
+	err = s.transactionRepo.UpdateTransaction(ctx, tx.ToAggregate())
 	if err != nil {
 		mmotel.Error(ctx, "Failed to update transaction: "+err.Error())
 	}

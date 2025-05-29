@@ -8,6 +8,7 @@ import (
 
 	"micro-mart/pkg/mmotel"
 	"micro-mart/services/transaction-orchestrator/config"
+	"micro-mart/services/transaction-orchestrator/domain/entity"
 	"micro-mart/services/transaction-orchestrator/domain/model"
 	"micro-mart/services/transaction-orchestrator/domain/repository"
 	"micro-mart/services/transaction-orchestrator/domain/service"
@@ -55,9 +56,9 @@ func (s *RecoveryService) RecoverPendingTransactions(ctx context.Context) error 
 	defer span.End()
 
 	// Find transactions that need recovery
-	statuses := []model.TransactionStatus{
-		model.StatusPending,
-		model.StatusRollingBack,
+	statuses := []entity.TransactionStatus{
+		entity.TransactionStatus(model.StatusPending),
+		entity.TransactionStatus(model.StatusRollingBack),
 	}
 
 	transactions, err := s.transactionRepo.FindTransactionsByStatus(ctx, statuses)
@@ -70,7 +71,9 @@ func (s *RecoveryService) RecoverPendingTransactions(ctx context.Context) error 
 
 	// Process each transaction
 	for _, tx := range transactions {
-		err := s.recoverTransaction(ctx, tx)
+		// Convert aggregate.Transaction to model.Transaction
+		modelTx := model.FromAggregate(tx)
+		err := s.recoverTransaction(ctx, modelTx)
 		if err != nil {
 			mmotel.Error(ctx, "Failed to recover transaction: "+err.Error())
 			// Continue with other transactions even if one fails
@@ -111,7 +114,7 @@ func (s *RecoveryService) recoverUserRegistration(ctx context.Context, tx *model
 			// Invalid transaction, mark as failed
 			tx.Status = model.StatusFailed
 			tx.UpdatedAt = time.Now()
-			return s.transactionRepo.UpdateTransaction(ctx, tx)
+			return s.transactionRepo.UpdateTransaction(ctx, tx.ToAggregate())
 		}
 
 		// Check first step (user registration)
@@ -119,7 +122,7 @@ func (s *RecoveryService) recoverUserRegistration(ctx context.Context, tx *model
 			// First step not completed, can't do much, mark as failed
 			tx.Status = model.StatusFailed
 			tx.UpdatedAt = time.Now()
-			return s.transactionRepo.UpdateTransaction(ctx, tx)
+			return s.transactionRepo.UpdateTransaction(ctx, tx.ToAggregate())
 		}
 
 		// Check second step (token generation)
@@ -142,7 +145,7 @@ func (s *RecoveryService) recoverUserRegistration(ctx context.Context, tx *model
 				tx.Steps[1].Status = "FAILED"
 				tx.UpdatedAt = time.Now()
 				tx.Steps[1].UpdatedAt = time.Now()
-				return s.transactionRepo.UpdateTransaction(ctx, tx)
+				return s.transactionRepo.UpdateTransaction(ctx, tx.ToAggregate())
 			}
 
 			// Token generation succeeded
@@ -151,7 +154,7 @@ func (s *RecoveryService) recoverUserRegistration(ctx context.Context, tx *model
 			tx.Status = model.StatusCompleted
 			tx.UpdatedAt = time.Now()
 			tx.Steps[1].UpdatedAt = time.Now()
-			return s.transactionRepo.UpdateTransaction(ctx, tx)
+			return s.transactionRepo.UpdateTransaction(ctx, tx.ToAggregate())
 		}
 
 	case model.StatusRollingBack:
@@ -177,7 +180,7 @@ func (s *RecoveryService) recoverUserRegistration(ctx context.Context, tx *model
 		// Mark transaction as rolled back
 		tx.Status = model.StatusRolledBack
 		tx.UpdatedAt = time.Now()
-		return s.transactionRepo.UpdateTransaction(ctx, tx)
+		return s.transactionRepo.UpdateTransaction(ctx, tx.ToAggregate())
 	}
 
 	return nil
