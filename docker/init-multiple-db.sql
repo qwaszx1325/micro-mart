@@ -1,6 +1,7 @@
 CREATE DATABASE user_db;
 CREATE DATABASE order_db;
 CREATE DATABASE product_db;
+CREATE DATABASE transaction_db;
 
 
 -- 想要新增使用者可以用下方方式新增
