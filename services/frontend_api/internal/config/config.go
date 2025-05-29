@@ -25,6 +25,10 @@ type (
 		UserUrl string `env:"USER_URL"`
 	}
 
+	Transaction struct {
+		TransactionOrchestratorAddress string `env:"TRANSACTION_ORCHESTRATOR_URL"`
+	}
+
 	Otel struct {
 		OtelUrl string `env:"OTEL_URL"`
 	}
@@ -61,6 +65,7 @@ type (
 		Otel
 		Auth
 		User
+		Transaction
 		Redis
 		DBs
 	}

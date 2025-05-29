@@ -6,6 +6,7 @@ func NewGrpcClientSet() fx.Option {
 	return fx.Module("grpc_client",
 		// 有增加其他服務要加在裡面
 		fx.Provide(NewUserClient),
-		fx.Provide(NewAuthClient))
+		fx.Provide(NewAuthClient),
+		fx.Provide(NewTransactionClient))
 
 }

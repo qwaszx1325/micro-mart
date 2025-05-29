@@ -6,6 +6,7 @@ import (
 	"micro-mart/pkg/mmotel"
 	"micro-mart/pkg/responder"
 	"micro-mart/pkg/utils"
+	"micro-mart/services/frontend_api/internal/infrastructure/grpc_client/transaction"
 	"micro-mart/services/frontend_api/internal/model/response"
 	"net/http"
 
@@ -15,14 +16,20 @@ import (
 )
 
 type UserHandler struct {
-	userClient *grpc_client.UserClient
-	authClient *grpc_client.AuthClient
+	userClient        *grpc_client.UserClient
+	authClient        *grpc_client.AuthClient
+	transactionClient *transaction.TransactionClient
 }
 
-func NewUserHandler(userClient *grpc_client.UserClient, authClient *grpc_client.AuthClient) *UserHandler {
+func NewUserHandler(
+	userClient *grpc_client.UserClient,
+	authClient *grpc_client.AuthClient,
+	transactionClient *transaction.TransactionClient,
+) *UserHandler {
 	return &UserHandler{
-		userClient: userClient,
-		authClient: authClient,
+		userClient:        userClient,
+		authClient:        authClient,
+		transactionClient: transactionClient,
 	}
 }
 
@@ -39,20 +46,22 @@ func (h *UserHandler) Register(c *gin.Context) {
 
 	ctx := c.Request.Context()
 
-	userResp, err := h.userClient.Register(ctx, &req)
-
+	// 使用交易協調器處理用戶註冊
+	resp, err := h.transactionClient.RegisterUserTransaction(ctx, &req)
 	if err != nil {
-		responder.Error(err).WithContext(c)
+		// 檢查是否已經是 MmError
+		if mmErr, ok := err.(*mmerror.MmError); ok {
+			responder.Error(mmErr).WithContext(c)
+		} else {
+			// 包裝為 MmError
+			mmErr := mmerror.New(mmerror.InternalServerError, "Registration failed", err)
+			responder.Error(mmErr).WithContext(c)
+		}
 		return
 	}
-	authResp, err := h.authClient.GenerateTokens(ctx, userResp.UserId, userResp.Username, userResp.Email, userResp.Role)
 
-	if err != nil {
-		responder.Error(err).WithContext(c)
-		return
-	}
 	// 設定 HttpOnly + Secure Cookie
-	refreshToken := authResp.RefreshToken
+	refreshToken := resp.RefreshToken
 	// 正式環境 secure 才設定為 true (https)
 	//c.SetCookie("refresh_token", refreshToken, 30*24*60*60, "/", "", true, true) // 30天, Secure + HttpOnly
 	c.SetCookie("refresh_token", refreshToken, 30*24*60*60, "/", "", false, true) // 30天, Secure + HttpOnly
@@ -60,7 +69,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 	// 回傳其餘資料（AccessToken 或其他資訊）
 	responder.Ok(response.GetAccessTokenResponse{
 		Success:     true,
-		AccessToken: authResp.AccessToken,
+		AccessToken: resp.AccessToken,
 	}).WithContext(c)
 }
 
